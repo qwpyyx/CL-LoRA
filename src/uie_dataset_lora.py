@@ -29,7 +29,7 @@ ANSWER_PREFIX = "Answer:"
 SINGLE_QUOTES_SUBSTITUTE = "#$%#"
 AUX_PROB = 0.3
 
-
+#将一系列与数据集和任务配置相关的参数组合成一个字符串，然后使用 MD5 哈希算法对其进行哈希计算，从而生成一个唯一的缓存路径
 def gen_cache_path(cache_dir, data_args):
     hash_str = data_args.data_dir + data_args.task_config_dir + \
                data_args.instruction_file + data_args.instruction_strategy + \

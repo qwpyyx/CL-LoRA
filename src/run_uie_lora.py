@@ -25,12 +25,10 @@ import json
 import time
 from dataclasses import dataclass, field
 from typing import Optional
-
 import datasets
-import nltk  # Here to have a nice missing dependency error message early on
+import nltk  # Here to have a nice missing dependency error message early on 1
 import numpy as np
 from datasets import load_dataset
-
 import transformers
 from filelock import FileLock
 from transformers import (
@@ -44,16 +42,20 @@ from transformers import (
     set_seed, )
 from transformers.file_utils import is_offline_mode
 from transformers.trainer_utils import get_last_checkpoint
+
+# fine-tune
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig # add
 
+# privacy
 from uie_collator import DataCollatorForUIE
 from uie_dataset_lora import gen_cache_path
-
 from uie_trainer_lora import UIETrainer, DenserEvalCallback, skip_instructions
 from compute_metrics import compute_metrics, compute_grouped_metrics
 from model.llama import LlamaForCausalLM_with_lossmask
 
-# off wandb
+######################################
+
+# 禁用 Weights & Biases（wandb）库的功能
 os.environ['WANDB_DISABLED'] = "True"
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 logger = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ except (LookupError, OSError):
         raise LookupError(
             "Offline mode: run this script without TRANSFORMERS_OFFLINE first to download nltk data files"
         )
+    # 确保在下载过程中不会有其他进程干扰
     with FileLock(".lock") as lock:
         nltk.download("punkt", quiet=True)
 
@@ -237,15 +240,15 @@ class UIETrainingArguments(Seq2SeqTrainingArguments):
         metadata={"help": "If specifid, the model will do more evaluation at the beginning of training."}
     )
     do_demo: bool = field(default=False, metadata={"help": "Whether to run the model as a demo in the terminal."})
-    lamda_1: float = field(default = 0.5)
-    lamda_2: float = field(default = 0)
+    lamda_1: float = field(default=0.5)
+    lamda_2: float = field(default=0)
 
 
 def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-
+    #print("begin")
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, UIETrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -367,6 +370,7 @@ def main():
 
     if 'adapter' in model_args.model_name_or_path: # add lora-adapter to the original model
         model = model_class.from_pretrained(config.base_model_name_or_path)
+        # 加载 LoRA 适配器
         model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
     elif 'llama' in model_args.model_name_or_path.lower():
         model = model_class.from_pretrained(
@@ -454,7 +458,7 @@ def main():
         predict_dataset = raw_datasets["test"]
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
-
+    print("collator")
     # Data collator
     label_pad_token_id = -100 if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id
     data_collator = DataCollatorForUIE(
