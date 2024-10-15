@@ -18,7 +18,7 @@
 Fine-tuning the library models for sequence to sequence.
 """
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
-
+import warnings
 import time
 import logging
 import os
@@ -56,12 +56,14 @@ from compute_metrics import compute_metrics, compute_grouped_metrics
 from model.llama import LlamaForCausalLM_with_lossmask
 
 ######################################
-
+# 忽略所有warnings信息
+warnings.filterwarnings("ignore")
 # 禁用 Weights & Biases（wandb）库的功能
 os.environ['WANDB_DISABLED'] = "True"
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 logger = logging.getLogger(__name__)
 CURRENT_DIR = os.path.dirname(__file__)
+
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -231,7 +233,6 @@ class DataTrainingArguments:
         default=False,
         metadata={"help": "whether to preappend dataset name before the task input."}
     )
-
 
 @dataclass
 class UIETrainingArguments(Seq2SeqTrainingArguments):

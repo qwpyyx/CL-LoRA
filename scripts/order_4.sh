@@ -9,7 +9,7 @@ port=$(shuf -i25000-30000 -n1)
  # Order 4
 
 # bash scripts/long.sh> logs_and_outputs/long/logs/train_and_infer.log 2>&1 &
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -43,9 +43,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --lamda_1 0 \
    --lamda_2 0
 
+# evaluation_strategy-No mean No evaluation is done during training.
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -81,16 +82,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
    --model_name_or_path logs_and_outputs/order_4/outputs/2-CB/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/WIC \
+   --task_config_dir configs/long_configs/WiC \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/order_4/outputs/3-WIC \
+   --output_dir logs_and_outputs/order_4/outputs/3-WiC \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -117,11 +118,11 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/order_4/outputs/3-WIC/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/3-WiC/adapter \
    --data_dir CL_Benchmark \
    --task_config_dir configs/long_configs/COPA \
    --instruction_file configs/instruction_config.json \
@@ -153,7 +154,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -189,7 +190,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -225,7 +226,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -261,7 +262,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -297,7 +298,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -333,7 +334,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -369,7 +370,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -405,7 +406,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -441,7 +442,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -477,7 +478,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
@@ -513,7 +514,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
