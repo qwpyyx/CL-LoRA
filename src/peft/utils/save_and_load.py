@@ -33,6 +33,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         state_dict = model.state_dict()
         
         # modified
+        # 做了融合
         if config.save_loranew == False:
             flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
             for k in state_dict:

@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path initial_model/t5-base \
+   --model_name_or_path /home/qiuwenqi/LLM/models/t5-large \
    --data_dir CL_Benchmark \
    --task_config_dir configs/order3_configs/yahoo \
    --instruction_file configs/instruction_config.json \

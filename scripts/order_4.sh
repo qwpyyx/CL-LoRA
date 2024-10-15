@@ -5,18 +5,20 @@ export CUDA_DEVICE_ORDER="PCI_BUS_ID"
 export TRANSFORMERS_CACHE=/home/qiuwenqi/.cache/huggingface
 
 port=$(shuf -i25000-30000 -n1)
- 
+
+ # Order 4
+
 # bash scripts/long.sh> logs_and_outputs/long/logs/train_and_infer.log 2>&1 &
 CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path initial_model/t5-large \
+   --model_name_or_path /home/qiuwenqi/LLM/models/t5-large \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/yelp \
+   --task_config_dir configs/long_configs/MNLI \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/1-yelp \
+   --output_dir logs_and_outputs/order_4/outputs/1-MNLI \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -43,16 +45,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/1-yelp/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/1-MNLI/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/amazon \
+   --task_config_dir configs/long_configs/CB \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/2-amazon \
+   --output_dir logs_and_outputs/order_4/outputs/2-CB \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -79,16 +81,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/2-amazon/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/2-CB/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/MNLI \
+   --task_config_dir configs/long_configs/WIC \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/3-MNLI \
+   --output_dir logs_and_outputs/order_4/outputs/3-WIC \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -115,16 +117,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/3-MNLI/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/3-WIC/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/CB \
+   --task_config_dir configs/long_configs/COPA \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/4-CB \
+   --output_dir logs_and_outputs/order_4/outputs/4-COPA \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -151,16 +153,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/4-CB/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/4-COPA/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/COPA \
+   --task_config_dir configs/long_configs/QQP \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/5-COPA \
+   --output_dir logs_and_outputs/order_4/outputs/5-QQP \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -187,16 +189,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/5-COPA/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/5-QQP/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/QQP \
+   --task_config_dir configs/long_configs/BoolQA \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/6-QQP \
+   --output_dir logs_and_outputs/order_4/outputs/6-BoolQA \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -223,16 +225,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/6-QQP/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/6-BoolQA/adapter \
    --data_dir CL_Benchmark \
    --task_config_dir configs/long_configs/RTE \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/7-RTE \
+   --output_dir logs_and_outputs/order_4/outputs/7-RTE \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -259,16 +261,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/7-RTE/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/7-RTE/adapter \
    --data_dir CL_Benchmark \
    --task_config_dir configs/long_configs/IMDB \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/8-IMDB \
+   --output_dir logs_and_outputs/order_4/outputs/8-IMDB \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -295,16 +297,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/8-IMDB/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/8-IMDB/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/SST-2 \
+   --task_config_dir configs/long_configs/yelp \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/9-SST-2 \
+   --output_dir logs_and_outputs/order_4/outputs/9-yelp \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -331,16 +333,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/9-SST-2/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/9-yelp/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/dbpedia \
+   --task_config_dir configs/long_configs/amazon \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/10-dbpedia \
+   --output_dir logs_and_outputs/order_4/outputs/10-amazon \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -367,16 +369,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/10-dbpedia/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/10-amazon/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/agnews \
+   --task_config_dir configs/long_configs/SST-2 \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/11-agnews \
+   --output_dir logs_and_outputs/order_4/outputs/11-SST-2 \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -403,16 +405,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/11-agnews/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/11-SST-2/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/yahoo \
+   --task_config_dir configs/long_configs/dbpedia \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/12-yahoo \
+   --output_dir logs_and_outputs/order_4/outputs/12-dbpedia \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -439,16 +441,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/12-yahoo/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/12-dbpedia/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/MultiRC \
+   --task_config_dir configs/long_configs/agnews \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/13-MultiRC \
+   --output_dir logs_and_outputs/order_4/outputs/13-agnews \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -475,16 +477,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/13-MultiRC/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/13-agnews/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/BoolQA \
+   --task_config_dir configs/long_configs/MultiRC \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/14-BoolQA \
+   --output_dir logs_and_outputs/order_4/outputs/14-MultiRC \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
@@ -511,16 +513,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_l
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 deepspeed --master_port 25000 src/run_uie_lora.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 25000 src/run_uie_lora.py \
    --do_train \
    --do_predict \
    --predict_with_generate \
-   --model_name_or_path logs_and_outputs/long/outputs/14-BoolQA/adapter \
+   --model_name_or_path logs_and_outputs/order_4/outputs/14-MultiRC/adapter \
    --data_dir CL_Benchmark \
-   --task_config_dir configs/long_configs/WiC \
+   --task_config_dir configs/long_configs/yahoo \
    --instruction_file configs/instruction_config.json \
    --instruction_strategy single \
-   --output_dir logs_and_outputs/long/outputs/15-WiC \
+   --output_dir logs_and_outputs/order_4/outputs/15-yahoo \
    --per_device_train_batch_size 8 \
    --per_device_eval_batch_size 128 \
    --gradient_accumulation_steps 1 \
