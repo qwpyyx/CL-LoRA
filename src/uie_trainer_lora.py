@@ -55,7 +55,6 @@ class UIETrainer(Seq2SeqTrainer):
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
         """
         Perform a training step on a batch of inputs.
-
         Subclass and override to inject custom behavior.
 
         Args:
@@ -70,12 +69,14 @@ class UIETrainer(Seq2SeqTrainer):
         Return:
             `torch.Tensor`: The tensor with training loss on this batch.
         """
+
         model.train()
+        # 根据输入数据的类型进行适当的处理，确保输入数据符合模型的要求。
         inputs = self._prepare_inputs(inputs)
 
-        if is_sagemaker_mp_enabled():
-            loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
-            return loss_mb.reduce_mean().detach().to(self.args.device)
+        # if is_sagemaker_mp_enabled():
+        #     loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
+        #     return loss_mb.reduce_mean().detach().to(self.args.device)
 
         with self.compute_loss_context_manager():
             loss = self.compute_loss(model, inputs)

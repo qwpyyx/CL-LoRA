@@ -342,6 +342,31 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
             _set_trainable(self, adapter_name)
 
     def load_adapter(self, model_id, adapter_name, is_trainable=False, **kwargs):
+        """
+        Load a trained adapter into the model.
+
+        The name for the new adapter should be unique.
+
+        The new adapter is not automatically set as the active adapter. Use [`PeftModel.set_adapter`] to set the active
+        adapter.
+
+        Args:
+            model_id (`str` or `os.PathLike`):
+                The name of the PEFT configuration to use. Can be either:
+                    - A string, the `model id` of a PEFT configuration hosted inside a model repo on the Hugging Face
+                      Hub.
+                    - A path to a directory containing a PEFT configuration file saved using the `save_pretrained`
+                      method (`./my_peft_config_directory/`).
+            adapter_name (`str`):
+                The name of the adapter to be added.
+            is_trainable (`bool`, *optional*, defaults to `False`):
+                Whether the adapter should be trainable or not. If `False`, the adapter will be frozen and can only be
+                used for inference.
+            kwargs: (`optional`):
+                Additional arguments to modify the way the adapter is loaded, e.g. the token for Hugging Face Hub.
+        """
+
+
         from .mapping import PEFT_TYPE_TO_CONFIG_MAPPING
 
         if adapter_name not in self.peft_config:
@@ -349,6 +374,8 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
             peft_config = PEFT_TYPE_TO_CONFIG_MAPPING[
                 PeftConfig.from_pretrained(model_id, subfolder=kwargs.get("subfolder", None)).peft_type
             ].from_pretrained(model_id, subfolder=kwargs.get("subfolder", None))
+
+
             if isinstance(peft_config, PromptLearningConfig) and is_trainable:
                 raise ValueError("Cannot set a prompt learning adapter to trainable when loading pretrained adapter.")
             else:
@@ -373,7 +400,13 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
             filename, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
         # load the weights into the model
+        # 这个函数被修改set_peft_model_state_dict
+        # ——————————————————————
         set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
+        # ——————————————————————
+
+        
+        # 已有
         if (
             (getattr(self, "hf_device_map", None) is not None)
             and (len(set(self.hf_device_map.values()).intersection({"cpu", "disk"})) > 0)

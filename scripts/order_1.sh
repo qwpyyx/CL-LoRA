@@ -11,6 +11,7 @@ port=$(shuf -i25000-30000 -n1)
 CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
+   --seed 1234 \
    --predict_with_generate \
    --model_name_or_path initial_model/t5-base \
    --data_dir CL_Benchmark \
@@ -47,6 +48,7 @@ sleep 5
 CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
+   --seed 1234 \
    --predict_with_generate \
    --model_name_or_path logs_and_outputs/order_1/outputs/1-dbpedia/adapter \
    --data_dir CL_Benchmark \
@@ -83,6 +85,7 @@ sleep 5
 CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
+   --seed 1234 \
    --predict_with_generate \
    --model_name_or_path logs_and_outputs/order_1/outputs/2-amazon/adapter \
    --data_dir CL_Benchmark \
@@ -119,6 +122,7 @@ sleep 5
 CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --do_train \
    --do_predict \
+   --seed 1234 \
    --predict_with_generate \
    --model_name_or_path logs_and_outputs/order_1/outputs/3-yahoo/adapter \
    --data_dir CL_Benchmark \

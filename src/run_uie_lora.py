@@ -13,20 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Fine-tuning the library models for sequence to sequence.
 """
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 
+import time
 import logging
 import os
 import sys
 import json
-import time
 from dataclasses import dataclass, field
 from typing import Optional
 import datasets
-import nltk  # Here to have a nice missing dependency error message early on 1
+import nltk
 import numpy as np
 from datasets import load_dataset
 import transformers
@@ -44,7 +45,8 @@ from transformers.file_utils import is_offline_mode
 from transformers.trainer_utils import get_last_checkpoint
 
 # fine-tune
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig # add
+# 改了peft库
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
 
 # privacy
 from uie_collator import DataCollatorForUIE
@@ -78,9 +80,11 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    model_method: Optional[str] = field(
+        default=None, metadata={"help": "T5/roberta/llama"}
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -185,7 +189,7 @@ class DataTrainingArguments:
         default=10000, metadata={"help": "The maximum number of instances we will consider for each training task."}
     )
     max_num_instances_per_eval_task: int = field(
-        default=200,
+        default=500,
         metadata={"help": "The maximum number of instances we will consider for each validation/test task."}
     )
     max_train_samples: Optional[int] = field(
@@ -257,6 +261,11 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    print(model_args)
+    print("_________")
+    print(data_args)
+    print("_________")
+    print(training_args)
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -272,8 +281,8 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu},"
+        f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
     )
     logger.info(f"Training/evaluation parameters {training_args}")
 
@@ -294,6 +303,8 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+
+
     data_cache_dir = gen_cache_path(training_args.output_dir, data_args)
 
     # Get the UIE dataset
@@ -309,6 +320,9 @@ def main():
         num_examples=data_args.num_examples
     )
     raw_datasets.cleanup_cache_files()
+
+
+
 
     # Load pretrained model and tokenizer
     #
@@ -362,16 +376,19 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
+    # 模型类别设置
     if 'llama' in model_args.model_name_or_path.lower():  # add llama
         model_class = LlamaForCausalLM_with_lossmask
         tokenizer.padding_side = 'left'
     else: 
         model_class = AutoModelForSeq2SeqLM
 
+    # 已经有了训练好的 LoRA 适配器参数，此时只需要把这些参数加载进模型中
     if 'adapter' in model_args.model_name_or_path: # add lora-adapter to the original model
         model = model_class.from_pretrained(config.base_model_name_or_path)
         # 加载 LoRA 适配器
         model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
+    # 在现有的模型上 初始化一个新的 LoRA 适配器
     elif 'llama' in model_args.model_name_or_path.lower():
         model = model_class.from_pretrained(
             model_args.model_name_or_path,
@@ -381,10 +398,21 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None
         )
+    # 这里修改其他PEFT方法
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
         )
         model = get_peft_model(model, peft_config)
+
+        # 如 prefix tuning
+        # from peft import PrefixTuningConfig, get_peft_model
+        #
+        # peft_config = PrefixTuningConfig(
+        #     task_type=TaskType.CAUSAL_LM,  # 任务类型，比如语言模型
+        #     num_virtual_tokens=20,  # 添加的虚拟前缀的长度
+        #     prefix_projection=False,  # 是否对前缀进行线性投影
+        # )
+        # model = get_peft_model(model, peft_config)
     else:
         model = model_class.from_pretrained(
             model_args.model_name_or_path,
@@ -399,6 +427,7 @@ def main():
         )
         model = get_peft_model(model, peft_config)
 
+    # 确保模型的词嵌入矩阵与 tokenizer 的词汇表大小一致
     model.resize_token_embeddings(len(tokenizer))
 
     if 'llama' in model_args.model_name_or_path.lower():
@@ -458,7 +487,7 @@ def main():
         predict_dataset = raw_datasets["test"]
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
-    print("collator")
+
     # Data collator
     label_pad_token_id = -100 if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id
     data_collator = DataCollatorForUIE(
@@ -480,6 +509,7 @@ def main():
 
     # Metric
     def compute_rouge_metrics(dataset, preds, save_prefix=None):
+        # 对生成式模型的输出进行后处理
         decoded_preds = skip_instructions(model, preds, tokenizer)
         references = [e["Instance"]["label"] for e in dataset]
         result = compute_metrics(predictions=decoded_preds, references=references)
@@ -528,6 +558,8 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
+
+        # 这个train是哪个函数里面的？
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
 
         peft_model_id = training_args.output_dir + "/adapter"

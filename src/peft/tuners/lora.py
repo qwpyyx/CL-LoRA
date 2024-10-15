@@ -404,13 +404,30 @@ class LoraModel(torch.nn.Module):
 
 
 # had to adapt it for `lora_only` to work
+
+
 def mark_only_lora_as_trainable(model: nn.Module, bias: str = "none") -> None:
+    """Freeze all modules except LoRA's and depending on 'bias' value unfreezes bias weights.
+
+    Args:
+        model: model with LoRA layers
+        bias:
+            ``"none"``: all bias weights will be frozen,
+            ``"lora_only"``: only bias weight for LoRA layers will be unfrozen,
+            ``"all"``: all bias weights will be unfrozen.
+
+    Raises:
+        NotImplementedError: if `bias` not in ["none", "lora_only", "all"]
+    """
+    # freeze all layers except LoRA's
     for n, p in model.named_parameters():
         if "lora_" not in n:
             p.requires_grad = False
+
+    # depending on the `bias` value unfreeze bias weights
     if bias == "none":
         return
-    elif bias == "all":
+    if bias == "all":
         for n, p in model.named_parameters():
             if "bias" in n:
                 p.requires_grad = True
@@ -420,6 +437,7 @@ def mark_only_lora_as_trainable(model: nn.Module, bias: str = "none") -> None:
                 m.bias.requires_grad = True
     else:
         raise NotImplementedError
+
 
 
 class LoraLayer:
