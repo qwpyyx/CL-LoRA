@@ -128,6 +128,11 @@ class ModelArguments:
         },
     )
 
+    #original LoRA setting
+    use_baseline_lora: bool = field(
+        default=False,
+        metadata={"help": "Whether to use a single LoRA configuration for all tasks (baseline LoRA)."}
+    )
 
 @dataclass
 class DataTrainingArguments:
