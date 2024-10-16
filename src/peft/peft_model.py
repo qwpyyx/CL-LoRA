@@ -329,6 +329,9 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         if isinstance(peft_config, PromptLearningConfig):
             self._setup_prompt_encoder(adapter_name)
         else:
+            # 修改：在调用 base_model.add_adapter 时，需要处理 Baseline LoRA 逻辑
+            if getattr(self, 'use_baseline_lora', False) and adapter_name != "default":
+                adapter_name = "baseline_lora"
             self.base_model.add_adapter(adapter_name, peft_config)
 
         self.set_additional_trainable_modules(peft_config, adapter_name)
@@ -369,6 +372,12 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
 
         from .mapping import PEFT_TYPE_TO_CONFIG_MAPPING
 
+        # 如果启用Baseline模式，仅加载默认适配器，避免加载多个任务的适配器
+        if getattr(self, 'use_baseline_lora', False) and adapter_name != "default":
+            # 如果是Baseline模式且不是默认适配器，直接返回不执行加载
+            return
+
+
         if adapter_name not in self.peft_config:
             # load the config
             peft_config = PEFT_TYPE_TO_CONFIG_MAPPING[
@@ -380,6 +389,10 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
                 raise ValueError("Cannot set a prompt learning adapter to trainable when loading pretrained adapter.")
             else:
                 peft_config.inference_mode = not is_trainable
+            # 修改：处理 Baseline LoRA 的逻辑
+            if getattr(self, 'use_baseline_lora', False) and adapter_name != "default":
+                adapter_name = "baseline_lora"
+
             self.add_adapter(adapter_name, peft_config)
 
         # load weights if any
@@ -405,7 +418,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
         # ——————————————————————
 
-        
+
         # 已有
         if (
             (getattr(self, "hf_device_map", None) is not None)
@@ -694,7 +707,11 @@ class PeftModelForCausalLM(PeftModel):
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__(model, peft_config, adapter_name)
         self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
-
+        # 检查 base_model 是否有 prepare_inputs_for_generation 方法
+        if hasattr(self.base_model, 'prepare_inputs_for_generation'):
+            self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
+        else:
+            self.base_model_prepare_inputs_for_generation = None
     def forward(
         self,
         input_ids=None,
@@ -878,10 +895,11 @@ class PeftModelForSeq2SeqLM(PeftModel):
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__(model, peft_config, adapter_name)
-        self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
-        self.base_model_prepare_encoder_decoder_kwargs_for_generation = (
-            self.base_model._prepare_encoder_decoder_kwargs_for_generation
-        )
+        if hasattr(self.base_model, 'prepare_inputs_for_generation'):
+            self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
+        if hasattr(self.base_model, "_prepare_encoder_decoder_kwargs_for_generation"):
+            self.base_model_prepare_encoder_decoder_kwargs_for_generation = (self.base_model._prepare_encoder_decoder_kwargs_for_generation)
+
 
     def forward(
         self,

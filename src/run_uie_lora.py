@@ -267,11 +267,11 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    print(model_args)
-    print("_________")
-    print(data_args)
-    print("_________")
-    print(training_args)
+    # print(model_args)
+    # print("_________")
+    # print(data_args)
+    # print("_________")
+    # print(training_args)
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -391,9 +391,20 @@ def main():
 
     # 已经有了训练好的 LoRA 适配器参数，此时只需要把这些参数加载进模型中
     if 'adapter' in model_args.model_name_or_path: # add lora-adapter to the original model
-        model = model_class.from_pretrained(config.base_model_name_or_path)
-        # 加载 LoRA 适配器
-        model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
+        if model_args.use_baseline_lora:
+            # 使用Baseline单一LoRA配置
+            model = model_class.from_pretrained(config.base_model_name_or_path)
+            # 加载单一LoRA适配器
+            model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
+        else:
+            model = model_class.from_pretrained(config.base_model_name_or_path)
+            # 加载 LoRA 适配器
+            model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
+
+        print("Loaded adapters after model initialization:")
+        for adapter_name in model.peft_config.keys():
+            print(f" - Adapter: {adapter_name}")
+
     # 在现有的模型上 初始化一个新的 LoRA 适配器
     elif 'llama' in model_args.model_name_or_path.lower():
         model = model_class.from_pretrained(
@@ -404,11 +415,19 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None
         )
-    # 这里修改其他PEFT方法
-        peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
-        )
-        model = get_peft_model(model, peft_config)
+        if model_args.use_baseline_lora:
+            # 使用Baseline单一LoRA配置
+            peft_config = LoraConfig(
+                task_type=TaskType.CAUSAL_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32,
+                lora_dropout=0.1
+            )
+            model = get_peft_model(model, peft_config)
+        else:
+            # 这里修改其他PEFT方法
+            peft_config = LoraConfig(
+                task_type=TaskType.CAUSAL_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
+            )
+            model = get_peft_model(model, peft_config)
 
         # 如 prefix tuning
         # from peft import PrefixTuningConfig, get_peft_model
@@ -428,13 +447,28 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        peft_config = LoraConfig(
-            task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
-        )
-        model = get_peft_model(model, peft_config)
+        if model_args.use_baseline_lora:
+            # 使用Baseline单一LoRA配置
+            print("use baseline lora")
+            peft_config = LoraConfig(
+                task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32,
+                lora_dropout=0.1
+            )
+            model = get_peft_model(model, peft_config)
 
-    # 确保模型的词嵌入矩阵与 tokenizer 的词汇表大小一致
-    model.resize_token_embeddings(len(tokenizer))
+        else:
+            # 使用现有的多任务LoRA配置
+            peft_config = LoraConfig(
+                task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32,
+                lora_dropout=0.1
+            )
+            model = get_peft_model(model, peft_config)
+
+    # 获取 LoraModel 包裹的原始模型
+    original_model = model.get_base_model()
+
+    # 调用原始模型的 resize_token_embeddings 方法
+    original_model.resize_token_embeddings(len(tokenizer))
 
     if 'llama' in model_args.model_name_or_path.lower():
         model.generation_config.bos_token_id = 1
@@ -446,13 +480,22 @@ def main():
     # optional: lora_A/B is trainable but should not move too far from lorapre_A/B
     # (constrained in "training_step"[uie_trainer_lora.py])
     for name, param in model.named_parameters():
-        if name.find("loranew_") != -1:
+        for name, param in model.named_parameters():
+            if "lora" in name.lower():
+                print(f"Parameter: {name}, Requires Grad: {param.requires_grad}")
+        if 'lora' in name.lower() or 'adapter' in name.lower():
             param.requires_grad = True
-        elif name.find("lora_") != -1:
+        else:
             param.requires_grad = False
-        # this module should always be frozen because we change the vocabulary
-        elif name.find("shared") != -1:
-            param.requires_grad = False
+
+    trainable_params = []
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            trainable_params.append(name)
+            print(f"Trainable parameter: {name}")
+
+    if len(trainable_params) == 0:
+        raise ValueError("No trainable parameters found in the model.")
 
     if (
             hasattr(model.config, "max_position_embeddings")
@@ -552,7 +595,7 @@ def main():
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_rouge_metrics,
-        callbacks=[DenserEvalCallback] if training_args.denser_evaluation else None
+        callbacks=[DenserEvalCallback] if training_args.denser_evaluation else None,
     )
 
     all_metrics = {"run_name": training_args.run_name}

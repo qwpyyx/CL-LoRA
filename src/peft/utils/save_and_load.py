@@ -129,6 +129,9 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     else:
         state_dict = peft_model_state_dict
 
+    if getattr(model, 'use_baseline_lora', False) and adapter_name != "default":
+        adapter_name = "baseline_lora"
+
     if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
         peft_model_state_dict = {}
         for k, v in state_dict.items():

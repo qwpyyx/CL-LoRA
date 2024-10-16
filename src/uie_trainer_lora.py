@@ -53,30 +53,8 @@ class DenserEvalCallback(TrainerCallback):
 class UIETrainer(Seq2SeqTrainer):
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        """
-        Perform a training step on a batch of inputs.
-        Subclass and override to inject custom behavior.
-
-        Args:
-            model (`nn.Module`):
-                The model to train.
-            inputs (`Dict[str, Union[torch.Tensor, Any]]`):
-                The inputs and targets of the model.
-
-                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
-                argument `labels`. Check your model's documentation for all accepted arguments.
-
-        Return:
-            `torch.Tensor`: The tensor with training loss on this batch.
-        """
-
         model.train()
-        # 根据输入数据的类型进行适当的处理，确保输入数据符合模型的要求。
         inputs = self._prepare_inputs(inputs)
-
-        # if is_sagemaker_mp_enabled():
-        #     loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
-        #     return loss_mb.reduce_mean().detach().to(self.args.device)
 
         with self.compute_loss_context_manager():
             loss = self.compute_loss(model, inputs)
@@ -85,38 +63,44 @@ class UIETrainer(Seq2SeqTrainer):
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
         if self.args.gradient_accumulation_steps > 1 and not self.deepspeed:
-            # deepspeed handles loss scaling by gradient_accumulation_steps in its `backward`
             loss = loss / self.args.gradient_accumulation_steps
 
-        ########################### Regularization ##########################
-        orthogonal_loss = 0.
-        for name, param in self.model.named_parameters():
-            if "lora_A" in name:
-                for name_, param_ in self.model.named_parameters():
-                    if "loranew_A" in name_ and name.split("lora_A")[0] == name_.split("loranew_A")[0]:
-                        orthogonal_loss += torch.abs(torch.mm(param, param_.T)).sum() # [r * dim] * [dim * r]
-                        break # target modules have been matched
+        if not getattr(self.args, 'use_baseline_lora', False):
+            ########################### Regularization ##########################
+            orthogonal_loss = 0.
+            for name, param in self.model.named_parameters():
+                if "lora_A" in name:
+                    for name_, param_ in self.model.named_parameters():
+                        if "loranew_A" in name_ and name.split("lora_A")[0] == name_.split("loranew_A")[0]:
+                            orthogonal_loss += torch.abs(torch.mm(param, param_.T)).sum()
+                            break
 
-        # l2-normalization for loranew_A/B
-        l2_loss = 0.
-        for name, param in self.model.named_parameters():
-            if "loranew_" in name:
-                l2_loss += torch.norm(param, p=2)
+            # l2-normalization for loranew_A/B
+            l2_loss = 0.
+            for name, param in self.model.named_parameters():
+                if "loranew_" in name:
+                    l2_loss += torch.norm(param, p=2)
 
-        lamda_1 = self.args.lamda_1
-        lamda_2 = self.args.lamda_2
+            lamda_1 = self.args.lamda_1
+            lamda_2 = self.args.lamda_2
 
-        logger.info(f"orthogonal_loss: {orthogonal_loss.item()}; l2_loss: {l2_loss.item()}; accuracy_loss: {loss.item()}; λ1: {lamda_1}; λ2: {lamda_2}")
-        loss = loss + orthogonal_loss * lamda_1 + l2_loss * lamda_2
-        ######################################################################
+            # 添加对 Baseline LoRA 的判断，确保正则化损失的逻辑
+            if getattr(self, 'use_baseline_lora', False):
+                adapter_name = "baseline_lora"
+                logger.info(f"Using Baseline LoRA adapter: {adapter_name}")
 
+            logger.info(
+                f"orthogonal_loss: {orthogonal_loss.item()}; l2_loss: {l2_loss.item()}; accuracy_loss: {loss.item()}; λ1: {lamda_1}; λ2: {lamda_2}")
+            loss = loss + orthogonal_loss * lamda_1 + l2_loss * lamda_2
+            ######################################################################
+
+        # 处理梯度计算
         if self.do_grad_scaling:
             self.scaler.scale(loss).backward()
         elif self.use_apex:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         elif self.deepspeed:
-            # loss gets scaled under gradient_accumulation_steps in deepspeed
             loss = self.deepspeed.backward(loss)
         else:
             loss.backward()
@@ -347,6 +331,11 @@ class UIETrainer(Seq2SeqTrainer):
             generation_inputs = inputs[self.model.encoder.main_input_name]
         else:
             generation_inputs = inputs[self.model.main_input_name]
+
+        # 对 Baseline LoRA 模式的处理
+        if getattr(self, 'use_baseline_lora', False):
+            logger.info("Prediction step with Baseline LoRA adapter.")
+            self.model.set_adapter("baseline_lora")
 
         generated_tokens = self.model.generate(
             input_ids=generation_inputs, 
