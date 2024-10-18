@@ -77,7 +77,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
+   --lamda_1 0 \
    --lamda_2 0
 
 sleep 5
@@ -113,7 +113,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
+   --lamda_1 0 \
    --lamda_2 0
 
 sleep 5
@@ -149,7 +149,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
+   --lamda_1 0 \
    --lamda_2 0 
 
 sleep 5
@@ -185,8 +185,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
-   --lamda_2 0.1 
+   --lamda_1 0 \
+   --lamda_2 0
 
 sleep 5
 
@@ -221,8 +221,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
-   --lamda_2 0.1 
+   --lamda_1 0 \
+   --lamda_2 0
 
 sleep 5
 
@@ -257,8 +257,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
-   --lamda_2 0.3 
+   --lamda_1 0 \
+   --lamda_2 0
 
 sleep 5
 
@@ -293,7 +293,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
+   --lamda_1 0 \
    --lamda_2 0 
 
 sleep 5
@@ -329,8 +329,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 0.5 \
-   --lamda_2 0.1
+   --lamda_1 0 \
+   --lamda_2 0
 
 sleep 5
 
@@ -365,7 +365,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
+   --lamda_1 0 \
    --lamda_2 0
 
 sleep 5
@@ -401,7 +401,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
+   --lamda_1 0 \
    --lamda_2 0
 
 sleep 5
@@ -437,7 +437,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
+   --lamda_1 0 \
    --lamda_2 0.1
 
 sleep 5
@@ -473,7 +473,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
+   --lamda_1 0 \
    --lamda_2 0
 
 sleep 5
@@ -509,8 +509,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
-   --lamda_2 0.1
+   --lamda_1 0 \
+   --lamda_2 0
 
 sleep 5
 
@@ -545,5 +545,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port $port src/run_uie_lora.py \
    --evaluation_strategy no \
    --save_strategy no \
    --save_steps 1500 \
-   --lamda_1 5 \
-   --lamda_2 0.3
+   --lamda_1 0 \
+   --lamda_2 0

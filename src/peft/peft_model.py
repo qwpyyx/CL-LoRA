@@ -267,6 +267,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         """
         Prints the number of trainable parameters in the model.
         """
+        #
         trainable_params = 0
         all_param = 0
         for _, param in self.named_parameters():

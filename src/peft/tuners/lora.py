@@ -154,7 +154,7 @@ class LoraModel(torch.nn.Module):
         self.forward = self.model.forward
         self.peft_config = config
         self.add_adapter(adapter_name, self.peft_config[adapter_name])
-
+#
     def add_adapter(self, adapter_name, config=None):
         if config is not None:
             model_config = self.model.config.to_dict() if hasattr(self.model.config, "to_dict") else self.model.config
