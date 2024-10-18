@@ -19,7 +19,6 @@ Fine-tuning the library models for sequence to sequence.
 """
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 import warnings
-import time
 import logging
 import os
 import sys
@@ -43,9 +42,6 @@ from transformers import (
     set_seed, )
 from transformers.file_utils import is_offline_mode
 from transformers.trainer_utils import get_last_checkpoint
-
-# fine-tune
-# 改了peft库
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
 
 # privacy
