@@ -17,6 +17,7 @@
 """
 Fine-tuning the library models for sequence to sequence.
 """
+
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 import warnings
 import logging
@@ -51,12 +52,10 @@ from uie_trainer_lora import UIETrainer, DenserEvalCallback, skip_instructions
 from compute_metrics import compute_metrics, compute_grouped_metrics
 from model.llama import LlamaForCausalLM_with_lossmask
 
-######################################
-# 忽略所有warnings信息
+
+# ignore all warning
 warnings.filterwarnings("ignore")
-# 禁用 Weights & Biases（wandb）库的功能
 os.environ['WANDB_DISABLED'] = "True"
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 logger = logging.getLogger(__name__)
 CURRENT_DIR = os.path.dirname(__file__)
 
@@ -68,7 +67,6 @@ except (LookupError, OSError):
         raise LookupError(
             "Offline mode: run this script without TRANSFORMERS_OFFLINE first to download nltk data files"
         )
-    # 确保在下载过程中不会有其他进程干扰
     with FileLock(".lock") as lock:
         nltk.download("punkt", quiet=True)
 
@@ -252,12 +250,10 @@ class UIETrainingArguments(Seq2SeqTrainingArguments):
 
 def main():
     # See all possible arguments in src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
-    #print("begin")
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, UIETrainingArguments))
+
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
+        # If we pass only one argument to the script, and it's the path to a json file,
         # let's parse it to get our arguments.
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:

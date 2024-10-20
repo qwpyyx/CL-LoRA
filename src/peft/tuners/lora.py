@@ -159,6 +159,7 @@ class LoraModel(torch.nn.Module):
         if config is not None:
             model_config = self.model.config.to_dict() if hasattr(self.model.config, "to_dict") else self.model.config
             config = self._prepare_lora_config(config, model_config)
+            # 把用_prepare_lora_config得到的config更新
             self.peft_config[adapter_name] = config
         self._find_and_replace(adapter_name)
         if len(self.peft_config) > 1 and self.peft_config[adapter_name].bias != "none":
@@ -226,6 +227,7 @@ class LoraModel(torch.nn.Module):
                         in_features, out_features = target.num_embeddings, target.embedding_dim
                         new_module = Embedding(adapter_name, in_features, out_features, **embedding_kwargs)
                     else:
+                        # 判断target 是不是 线性层，比如Linear()
                         if isinstance(target, torch.nn.Linear):
                             in_features, out_features = target.in_features, target.out_features
                             if kwargs["fan_in_fan_out"]:
@@ -319,6 +321,7 @@ class LoraModel(torch.nn.Module):
             if isinstance(module, LoraLayer):
                 module.unmerge()
 
+    #这个函数本质上是让peft_config得到两个新的key：target_modules，这是指定哪些模块会构建LoRA
     @staticmethod
     def _prepare_lora_config(peft_config, model_config):
         if peft_config.target_modules is None:
@@ -326,6 +329,7 @@ class LoraModel(torch.nn.Module):
                 raise ValueError("Please specify `target_modules` in `peft_config`")
             peft_config.target_modules = TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING[model_config["model_type"]]
         if peft_config.inference_mode:
+            # 这里判断，如果是推理，就融合之前的lora
             peft_config.merge_weights = True
         return peft_config
 
@@ -541,6 +545,7 @@ class Linear(nn.Linear, LoraLayer):
         init_lora_weights = kwargs.pop("init_lora_weights", True)
 
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
+        # 这里
         LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
         # Freezing the pre-trained weight matrix
         self.weight.requires_grad = False
