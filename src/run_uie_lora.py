@@ -54,7 +54,7 @@ from model.llama import LlamaForCausalLM_with_lossmask
 
 
 # ignore all warning
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 os.environ['WANDB_DISABLED'] = "True"
 logger = logging.getLogger(__name__)
 CURRENT_DIR = os.path.dirname(__file__)
@@ -419,6 +419,7 @@ def main():
         peft_config = LoraConfig(
             task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
         )
+        #应该是修改这部分
         model = get_peft_model(model, peft_config)
 
     # 确保模型的词嵌入矩阵与 tokenizer 的词汇表大小一致
@@ -553,10 +554,11 @@ def main():
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
 
-        # 这个train是哪个函数里面的？
+        # debug不了这一步
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
 
         peft_model_id = training_args.output_dir + "/adapter"
+        # 保存训练下来的模型参数和tokenizer
         trainer.model.save_pretrained(peft_model_id)  
         tokenizer.save_pretrained(peft_model_id)
 
@@ -590,7 +592,7 @@ def main():
 
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
-
+        # train_seq2seq.py
         predict_results = trainer.predict(
             predict_dataset,
             metric_key_prefix="predict",

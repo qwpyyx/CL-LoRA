@@ -33,7 +33,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         state_dict = model.state_dict()
         
         # modified
-        # 做了融合
+        # 如果 save_loranew 为 False，说明需要将 lora 和 loranew 的参数进行融合
         if config.save_loranew == False:
             flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
             for k in state_dict:
@@ -63,6 +63,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
             if config.save_loranew: 
                 to_return = {k: state_dict[k] for k in state_dict if "lora_" in k or "loranew_" in k} # modified
             else:
+                # 这种情况loranew的都已经被融合进lora_里面了，所以不需要loranew
                 to_return = {k: state_dict[k] for k in state_dict if "lora_" in k}
 
         elif bias == "all":
@@ -79,6 +80,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
             raise NotImplementedError
 
         # modified
+        # 对 to_return 字典进行进一步的过滤,只保留这三种情况的键
         to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k) or ("loranew_" in k))}
         
         if config.peft_type == PeftType.ADALORA:

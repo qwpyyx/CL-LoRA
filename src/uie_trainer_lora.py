@@ -79,6 +79,7 @@ class UIETrainer(Seq2SeqTrainer):
         #     return loss_mb.reduce_mean().detach().to(self.args.device)
 
         with self.compute_loss_context_manager():
+            # 算前向loss
             loss = self.compute_loss(model, inputs)
 
         if self.args.n_gpu > 1:
@@ -123,7 +124,7 @@ class UIETrainer(Seq2SeqTrainer):
 
         return loss.detach()
 
-
+    # prediction_step
     def evaluation_loop(
         self,
         dataloader: DataLoader,

@@ -154,12 +154,13 @@ class LoraModel(torch.nn.Module):
         self.forward = self.model.forward
         self.peft_config = config
         self.add_adapter(adapter_name, self.peft_config[adapter_name])
-#
+
     def add_adapter(self, adapter_name, config=None):
         if config is not None:
             model_config = self.model.config.to_dict() if hasattr(self.model.config, "to_dict") else self.model.config
+            # 目的是得到新的key：target_module,如['q','v']
             config = self._prepare_lora_config(config, model_config)
-            # 把用_prepare_lora_config得到的config更新
+            # 把用_prepare_lora_config得到的config更新，这样就能明确lora加到qkv的哪里
             self.peft_config[adapter_name] = config
         self._find_and_replace(adapter_name)
         if len(self.peft_config) > 1 and self.peft_config[adapter_name].bias != "none":
@@ -186,19 +187,27 @@ class LoraModel(torch.nn.Module):
             "fan_in_fan_out": lora_config.fan_in_fan_out,
             "init_lora_weights": lora_config.init_lora_weights,
         }
+        # 得到所有的名称
         key_list = [key for key, _ in self.model.named_modules()]
+        '''
+        对所有模块进行判断，需要加lora的就给他加上
+        '''
         for key in key_list:
             if isinstance(lora_config.target_modules, str):
                 target_module_found = re.fullmatch(lora_config.target_modules, key)
             else:
+                #如果target_modules是可遍历型，就逐个遍历来判断这一层有没有需要加lora的地方
                 target_module_found = any(key.endswith(target_key) for target_key in lora_config.target_modules)
+            # 如果这一层要加，则
             if target_module_found:
                 if not is_target_modules_in_base_model:
                     is_target_modules_in_base_model = True
+                # 得到具体位置信息以及子类
                 parent, target, target_name = _get_submodules(self.model, key)
                 if hasattr(target, "bias"):
                     bias = target.bias is not None
 
+                #判断要加的target属于哪一类？是embeding还是loralayer还是linear等
                 if isinstance(target, LoraLayer):
                     target.update_layer(
                         adapter_name,
@@ -251,8 +260,10 @@ class LoraModel(torch.nn.Module):
                                 f"Target module {target} is not supported. "
                                 f"Currently, only `torch.nn.Linear` and `Conv1D` are supported."
                             )
+                        # 这里跳到lora.py的linear类
+                        # new_moudule是只跟lora相关的模块，其中lora_a,b都是[]
                         new_module = Linear(adapter_name, in_features, out_features, bias=bias, r_sum=lora_config.r_sum, **kwargs) # modified
-
+                    # 更新lora模块到原来没有的模块中
                     self._replace_module(parent, target_name, new_module, target)
         if not is_target_modules_in_base_model:
             raise ValueError(
@@ -261,7 +272,9 @@ class LoraModel(torch.nn.Module):
             )
 
     def _replace_module(self, parent_module, child_name, new_module, old_module):
+        # 将parent_module中叫child_name子模块替换为新的模块，原本parent模块里面q是linear(1024,1024)，现在替换成了new_module的linear(loraa,b,newa,newb)
         setattr(parent_module, child_name, new_module)
+        # 将旧模块的 weight 直接赋值给新模块的 weight
         new_module.weight = old_module.weight
         if hasattr(old_module, "bias"):
             if old_module.bias is not None:
@@ -475,15 +488,18 @@ class LoraLayer:
         else:
             lora_dropout_layer = nn.Identity()
 
+        # 更新lora的dropout层，从ModuleDict{}变成ModuleDict((default): Dropout(p=0.1, inplace=False))
         self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
         if r > 0:
+            #??????为什么loranew更新后的值不一样？？？
             self.loranew_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r, bias=False)})) # modified
             self.loranew_B.update(nn.ModuleDict({adapter_name: nn.Linear(r, self.out_features, bias=False)})) # modified
             self.lora_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r_sum, bias=False)})) # modified
             self.lora_B.update(nn.ModuleDict({adapter_name: nn.Linear(r_sum, self.out_features, bias=False)})) # modified
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
+            # 让原来loranew_B有的值变成0
             self.reset_lora_parameters(adapter_name)
         self.to(self.weight.device)
 
@@ -545,7 +561,8 @@ class Linear(nn.Linear, LoraLayer):
         init_lora_weights = kwargs.pop("init_lora_weights", True)
 
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
-        # 这里
+
+        # 这里，初始化loralayer，这里添加了loraA,B,new等
         LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
         # Freezing the pre-trained weight matrix
         self.weight.requires_grad = False
@@ -592,37 +609,60 @@ class Linear(nn.Linear, LoraLayer):
 
     def forward(self, x: torch.Tensor):
         previous_dtype = x.dtype
-
+        # 检查当前激活的适配器 (active_adapter) 是否存在于 lora_A 字典的键中
         if self.active_adapter not in self.lora_A.keys():
             return F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
         if self.disable_adapters:
+            # self.merged等于true代表权重已经被合并
             if self.r[self.active_adapter] > 0 and self.merged:
                 self.unmerge()
             result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+        # 如果适配器未禁用，且秩大于 0 且还未合并
         elif self.r[self.active_adapter] > 0 and not self.merged:
+            # 执行线性层的前向传播
             result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
-
+            # 将输入 x 转换为与 lora_A 适配器权重相同的数据类型，以确保数据类型的一致性。
             x = x.to(self.lora_A[self.active_adapter].weight.dtype)
+            # 应用 dropout 层，对输入 x 进行随机丢弃，以提高模型的泛化能力。
             x = self.lora_dropout[self.active_adapter](x)
 
-            result += (
+            orgin_AB = (
                 self.lora_B[self.active_adapter](
                     self.lora_A[self.active_adapter](x)
                 )
                 * self.scaling[self.active_adapter]
             )
 
-            # modified
-            result += (
+            result += orgin_AB
+
+            # result += (
+            #     self.lora_B[self.active_adapter](
+            #         self.lora_A[self.active_adapter](x)
+            #     )
+            #     * self.scaling[self.active_adapter]
+            # )
+
+            new_AB = (
                 self.loranew_B[self.active_adapter](
                     self.loranew_A[self.active_adapter](x)
                 )
-                * self.scaling[self.active_adapter] 
+                * self.scaling[self.active_adapter]
             )
+
+            result += new_AB
+
+            # modified
+            # result += (
+            #     self.loranew_B[self.active_adapter](
+            #         self.loranew_A[self.active_adapter](x)
+            #     )
+            #     * self.scaling[self.active_adapter]
+            # )
             
         else:
             result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
+        # 恢复原始数据类型
         result = result.to(previous_dtype)
 
         return result

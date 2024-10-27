@@ -84,7 +84,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         - **word_embeddings** (`torch.nn.Embedding`) -- The word embeddings of the transformer backbone
         in the base model if using [`PromptLearningConfig`].
     """
-
+    # LLMPruner
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__()
         self.base_model = model
@@ -96,6 +96,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not isinstance(peft_config, PromptLearningConfig):
             self.peft_config[adapter_name] = peft_config
+            # 下面进入lora.py的LoraModel类，相当于LoraModel(self.base_model, self.peft_config, adapter_name)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
@@ -878,6 +879,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
+        # 继承来自64行的PeftModel
         super().__init__(model, peft_config, adapter_name)
         self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
         self.base_model_prepare_encoder_decoder_kwargs_for_generation = (
@@ -899,6 +901,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
         **kwargs,
     ):
         peft_config = self.active_peft_config
+        # 跳到lora的forward步骤
         if not isinstance(peft_config, PromptLearningConfig):
             return self.base_model(
                 input_ids=input_ids,
