@@ -10,7 +10,7 @@ from uie_dataset_lora import ANSWER_PREFIX
 
 def skip_instructions(model, predictions_ids, tokenizer, ignore_idx=-100):
     predictions_ids = np.where(predictions_ids == ignore_idx, tokenizer.pad_token_id, predictions_ids)
-
+    # 将预测的 ID 序列解码为字符串
     predictions = tokenizer.batch_decode(
         predictions_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
     )
@@ -367,6 +367,7 @@ class UIETrainer(Seq2SeqTrainer):
         with torch.no_grad():
             if has_labels:
                 with self.autocast_smart_context_manager():
+                    # 跳到lora的forward
                     outputs = model(**inputs)
                 if self.label_smoother is not None:
                     loss = self.label_smoother(outputs, inputs["labels"]).mean().detach()

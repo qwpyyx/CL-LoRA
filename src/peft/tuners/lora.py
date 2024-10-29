@@ -274,7 +274,7 @@ class LoraModel(torch.nn.Module):
     def _replace_module(self, parent_module, child_name, new_module, old_module):
         # 将parent_module中叫child_name子模块替换为新的模块，原本parent模块里面q是linear(1024,1024)，现在替换成了new_module的linear(loraa,b,newa,newb)
         setattr(parent_module, child_name, new_module)
-        # 将旧模块的 weight 直接赋值给新模块的 weight
+        # 将旧模块的 weight 直接赋值给新模块的 weight，跟lora没关系
         new_module.weight = old_module.weight
         if hasattr(old_module, "bias"):
             if old_module.bias is not None:
@@ -480,7 +480,11 @@ class LoraLayer:
         self.in_features = in_features
         self.out_features = out_features
 
-    def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, r_sum): # modified 
+    def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, r_sum): # modified
+        """
+        更新跟lora有关的层的weight权重，包括dropout，lora_A,B,new_A,new_B等
+        """
+
         self.r[adapter_name] = r
         self.lora_alpha[adapter_name] = lora_alpha
         if lora_dropout > 0.0:
@@ -489,10 +493,13 @@ class LoraLayer:
             lora_dropout_layer = nn.Identity()
 
         # 更新lora的dropout层，从ModuleDict{}变成ModuleDict((default): Dropout(p=0.1, inplace=False))
+        # 用lora_dropout_layer来更新
         self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
         if r > 0:
-            #??????为什么loranew更新后的值不一样？？？
+            # 这里update是基于torch.nn来的，而update过程中自动调用了nn.linear类进行初始化，这个类里面有函数reset_parameters,
+            # 因此可以让loranew_A和loranew_B生成不一样的weight权重
+            # 这里new_B是没有变成0的，而是凯明初始化
             self.loranew_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r, bias=False)})) # modified
             self.loranew_B.update(nn.ModuleDict({adapter_name: nn.Linear(r, self.out_features, bias=False)})) # modified
             self.lora_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r_sum, bias=False)})) # modified
@@ -562,7 +569,7 @@ class Linear(nn.Linear, LoraLayer):
 
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
 
-        # 这里，初始化loralayer，这里添加了loraA,B,new等
+        # 这里，初始化loralayer，这里添加了loraA,B,new等模块
         LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
         # Freezing the pre-trained weight matrix
         self.weight.requires_grad = False
@@ -571,7 +578,9 @@ class Linear(nn.Linear, LoraLayer):
         if fan_in_fan_out:
             self.weight.data = self.weight.data.T
 
+        # 凯明初始化，这行代码会对当前实例中的线性层的权重和偏置项进行重新初始化。
         nn.Linear.reset_parameters(self)
+        # 更新跟lora相关的weight权重信息
         self.update_layer(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, r_sum) # modified
         self.active_adapter = adapter_name
 

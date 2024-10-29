@@ -106,6 +106,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
             if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
                 to_return[key.replace("modules_to_save.", "")] = value
 
+    # 将键名中表示适配器的部分去掉，从而得到更简洁的键名
     to_return = {k.replace(f".{adapter_name}", ""): v for k, v in to_return.items()}
     return to_return
 
@@ -138,9 +139,11 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 suffix = k.split("lora_")[1]
                 if "." in suffix:
                     suffix_to_replace = ".".join(suffix.split(".")[1:])
+                    # 将lora_A.weight变成lora_A.default.weight
                     k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
                 else:
                     k = f"{k}.{adapter_name}"
+                # 这一行进行了加载，把上一个任务的adapter加载进到lora_A,lora_B中。
                 peft_model_state_dict[k] = v
             
             # modified

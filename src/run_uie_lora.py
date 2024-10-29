@@ -187,14 +187,14 @@ class DataTrainingArguments:
         },
     )
     max_num_instances_per_task: int = field(
-        default=10000, metadata={"help": "The maximum number of instances we will consider for each training task."}
+        default=400, metadata={"help": "The maximum number of instances we will consider for each training task."}
     )
     max_num_instances_per_eval_task: int = field(
-        default=500,
+        default=400,
         metadata={"help": "The maximum number of instances we will consider for each validation/test task."}
     )
     max_train_samples: Optional[int] = field(
-        default=None,
+        default=100,
         metadata={
             "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
                     "value if set."
@@ -208,7 +208,7 @@ class DataTrainingArguments:
         },
     )
     max_predict_samples: Optional[int] = field(
-        default=None,
+        default=100,
         metadata={
             "help": "For debugging purposes or quicker training, truncate the number of prediction examples to this "
                     "value if set."
@@ -379,7 +379,7 @@ def main():
     # 已经有了训练好的 LoRA 适配器参数，此时只需要把这些参数加载进模型中
     if 'adapter' in model_args.model_name_or_path: # add lora-adapter to the original model
         model = model_class.from_pretrained(config.base_model_name_or_path)
-        # 加载 LoRA 适配器
+        # 加载 LoRA 适配器，里面有个函数load_adapter
         model = PeftModel.from_pretrained(model, model_args.model_name_or_path)
     # 在现有的模型上 初始化一个新的 LoRA 适配器
     elif 'llama' in model_args.model_name_or_path.lower():
@@ -481,7 +481,21 @@ def main():
             raise ValueError("--do_predict requires a test dataset")
         predict_dataset = raw_datasets["test"]
         if data_args.max_predict_samples is not None:
-            predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+            # predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+            unique_tasks = set(predict_dataset['Dataset'])
+            num_tasks = len(unique_tasks)
+            samples_per_task = data_args.max_predict_samples // num_tasks
+
+            # 确保每个任务有足够的样本
+            task_datasets = []
+            for task in unique_tasks:
+                task_data = predict_dataset.filter(lambda example: example['Dataset'] == task)
+                task_data = task_data.shuffle(seed=training_args.seed).select(range(min(samples_per_task, len(task_data))))
+                task_datasets.append(task_data)
+
+            # 将不同任务的数据集拼接成最终的预测数据集
+            from datasets import concatenate_datasets
+            predict_dataset = concatenate_datasets(task_datasets)
 
     # Data collator
     label_pad_token_id = -100 if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id
@@ -508,6 +522,7 @@ def main():
         decoded_preds = skip_instructions(model, preds, tokenizer)
         references = [e["Instance"]["label"] for e in dataset]
         result = compute_metrics(predictions=decoded_preds, references=references)
+        # 按类别进行分类，考虑的是所有TC类的准确率
         result_per_task = compute_grouped_metrics(predictions=decoded_preds, references=references,
                                                   groups=dataset["Task"])
         result.update(result_per_task)
@@ -554,7 +569,7 @@ def main():
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
 
-        # debug不了这一步
+        # T
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
 
         peft_model_id = training_args.output_dir + "/adapter"
@@ -590,8 +605,9 @@ def main():
         logger.info("*** Prediction ***")
         logger.info("*** Loading CheckPoint ***")
 
-        if data_args.max_predict_samples is not None:
-            predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+        # if data_args.max_predict_samples is not None:
+        #     predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+
         # train_seq2seq.py
         predict_results = trainer.predict(
             predict_dataset,

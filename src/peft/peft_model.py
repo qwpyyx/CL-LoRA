@@ -397,7 +397,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
                     f"Can't find weights for {model_id} in {model_id} or in the Hugging Face Hub. "
                     f"Please check that the file {WEIGHTS_NAME} is present at {model_id}."
                 )
-
+        # 加载adpter_model.bin文件
         adapters_weights = torch.load(
             filename, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
@@ -986,6 +986,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
         )
         try:
             if not isinstance(peft_config, PromptLearningConfig):
+                # 跳到lora.py的forward
                 outputs = self.base_model.generate(**kwargs)
             else:
                 if "input_ids" not in kwargs:
