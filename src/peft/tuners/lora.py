@@ -469,8 +469,10 @@ class LoraLayer:
         self.lora_dropout = nn.ModuleDict({})
         self.lora_A = nn.ModuleDict({})
         self.lora_B = nn.ModuleDict({})
-        self.loranew_A = nn.ModuleDict({}) # modified
-        self.loranew_B = nn.ModuleDict({}) # modified
+        #wenqi
+        #self.loranew_A = nn.ModuleDict({}) # modified
+        #self.loranew_B = nn.ModuleDict({}) # modified
+
         # For Embedding layer
         self.lora_embedding_A = nn.ParameterDict({})
         self.lora_embedding_B = nn.ParameterDict({})
@@ -500,10 +502,10 @@ class LoraLayer:
             # 这里update是基于torch.nn来的，而update过程中自动调用了nn.linear类进行初始化，这个类里面有函数reset_parameters,
             # 因此可以让loranew_A和loranew_B生成不一样的weight权重
             # 这里new_B是没有变成0的，而是凯明初始化
-            self.loranew_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r, bias=False)})) # modified
-            self.loranew_B.update(nn.ModuleDict({adapter_name: nn.Linear(r, self.out_features, bias=False)})) # modified
-            self.lora_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r_sum, bias=False)})) # modified
-            self.lora_B.update(nn.ModuleDict({adapter_name: nn.Linear(r_sum, self.out_features, bias=False)})) # modified
+            #self.loranew_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r, bias=False)})) # modified
+            #self.loranew_B.update(nn.ModuleDict({adapter_name: nn.Linear(r, self.out_features, bias=False)})) # modified
+            self.lora_A.update(nn.ModuleDict({adapter_name: nn.Linear(self.in_features, r, bias=False)})) # modified
+            self.lora_B.update(nn.ModuleDict({adapter_name: nn.Linear(r, self.out_features, bias=False)})) # modified
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
             # 让原来loranew_B有的值变成0
@@ -537,7 +539,8 @@ class LoraLayer:
         # modified
         if adapter_name in self.lora_A.keys(): 
             # initialize A and B to zero
-            nn.init.zeros_(self.lora_A[adapter_name].weight)
+            # nn.init.zeros_(self.lora_A[adapter_name].weight)
+            nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight, a=math.sqrt(5))
             nn.init.zeros_(self.lora_B[adapter_name].weight)
 
         if adapter_name in self.lora_embedding_A.keys():
@@ -546,9 +549,9 @@ class LoraLayer:
             nn.init.normal_(self.lora_embedding_B[adapter_name])
 
         # modified
-        if adapter_name in self.loranew_A.keys(): 
-            nn.init.kaiming_uniform_(self.loranew_A[adapter_name].weight, a=math.sqrt(5))
-            nn.init.zeros_(self.loranew_B[adapter_name].weight)
+        # if adapter_name in self.loranew_A.keys():
+        #     nn.init.kaiming_uniform_(self.loranew_A[adapter_name].weight, a=math.sqrt(5))
+        #     nn.init.zeros_(self.loranew_B[adapter_name].weight)
 
 
 class Linear(nn.Linear, LoraLayer):
@@ -618,6 +621,7 @@ class Linear(nn.Linear, LoraLayer):
 
     def forward(self, x: torch.Tensor):
         previous_dtype = x.dtype
+
         # 检查当前激活的适配器 (active_adapter) 是否存在于 lora_A 字典的键中
         if self.active_adapter not in self.lora_A.keys():
             return F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
@@ -651,14 +655,14 @@ class Linear(nn.Linear, LoraLayer):
             #     * self.scaling[self.active_adapter]
             # )
 
-            new_AB = (
-                self.loranew_B[self.active_adapter](
-                    self.loranew_A[self.active_adapter](x)
-                )
-                * self.scaling[self.active_adapter]
-            )
-
-            result += new_AB
+            # new_AB = (
+            #     self.loranew_B[self.active_adapter](
+            #         self.loranew_A[self.active_adapter](x)
+            #     )
+            #     * self.scaling[self.active_adapter]
+            # )
+            #
+            # result += new_AB
 
             # modified
             # result += (

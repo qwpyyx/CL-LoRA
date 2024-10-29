@@ -34,22 +34,22 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         
         # modified
         # 如果 save_loranew 为 False，说明需要将 lora 和 loranew 的参数进行融合
-        if config.save_loranew == False:
-            flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
-            for k in state_dict:
-                if "lora_A" in k:
-                    for k_ in state_dict:
-                        if "loranew_A" in k_ and k.split("lora_A")[0] == k_.split("loranew_A")[0]:
-                            state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=0) # [r_sum + r, r]
-                            if flag == 1:
-                                config.r_sum = state_dict[k].shape[0] 
-                                flag = 0
-                            break # target modules have been matched
-                elif "lora_B" in k:
-                    for k_ in state_dict:
-                        if "loranew_B" in k_ and k.split("lora_B")[0] == k_.split("loranew_B")[0]:
-                            state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=1) # [r, r_sum + r]
-                            break # target modules have been matched
+        # if config.save_loranew == False:
+        #     flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
+        #     for k in state_dict:
+        #         if "lora_A" in k:
+        #             for k_ in state_dict:
+        #                 if "loranew_A" in k_ and k.split("lora_A")[0] == k_.split("loranew_A")[0]:
+        #                     state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=0) # [r_sum + r, r]
+        #                     if flag == 1:
+        #                         config.r_sum = state_dict[k].shape[0]
+        #                         flag = 0
+        #                     break # target modules have been matched
+        #         elif "lora_B" in k:
+        #             for k_ in state_dict:
+        #                 if "loranew_B" in k_ and k.split("lora_B")[0] == k_.split("loranew_B")[0]:
+        #                     state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=1) # [r, r_sum + r]
+        #                     break # target modules have been matched
 
                 
     if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
@@ -81,8 +81,9 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
         # modified
         # 对 to_return 字典进行进一步的过滤,只保留这三种情况的键
-        to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k) or ("loranew_" in k))}
-        
+        # to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k) or ("loranew_" in k))}
+        to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
+
         if config.peft_type == PeftType.ADALORA:
             rank_pattern = config.rank_pattern
             if rank_pattern is not None:
@@ -106,7 +107,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
             if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
                 to_return[key.replace("modules_to_save.", "")] = value
 
-    # 将键名中表示适配器的部分去掉，从而得到更简洁的键名
+    # 将键名中表示适配器的部分去掉，从而得到更简洁的键名.但是后面如果是用adapter的方式，又要把这个default重新插回来（load_adapters）
     to_return = {k.replace(f".{adapter_name}", ""): v for k, v in to_return.items()}
     return to_return
 
@@ -147,15 +148,14 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 peft_model_state_dict[k] = v
             
             # modified
-            elif "loranew_" in k: 
-                suffix = k.split("loranew_")[1]
-                if "." in suffix:
-                    suffix_to_replace = ".".join(suffix.split(".")[1:])
-                    k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
-                else:
-                    k = f"{k}.{adapter_name}"
-                peft_model_state_dict[k] = v
-                
+            # elif "loranew_" in k:
+            #     suffix = k.split("loranew_")[1]
+            #     if "." in suffix:
+            #         suffix_to_replace = ".".join(suffix.split(".")[1:])
+            #         k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
+            #     else:
+            #         k = f"{k}.{adapter_name}"
+            #     peft_model_state_dict[k] = v
             else:
                 peft_model_state_dict[k] = v
         if config.peft_type == PeftType.ADALORA:

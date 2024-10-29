@@ -435,14 +435,14 @@ def main():
     # optional: lora_A/B is trainable but should not move too far from lorapre_A/B
     # (constrained in "training_step"[uie_trainer_lora.py])
     for name, param in model.named_parameters():
-        if name.find("loranew_") != -1:
+        # if name.find("loranew_") != -1:
+        #     param.requires_grad = True
+        if name.find("lora_") != -1:
             param.requires_grad = True
-        elif name.find("lora_") != -1:
-            param.requires_grad = False
         # this module should always be frozen because we change the vocabulary
         elif name.find("shared") != -1:
             param.requires_grad = False
-#
+
     if (
             hasattr(model.config, "max_position_embeddings")
             and model.config.max_position_embeddings < data_args.max_source_length

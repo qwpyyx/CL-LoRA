@@ -90,25 +90,27 @@ class UIETrainer(Seq2SeqTrainer):
             loss = loss / self.args.gradient_accumulation_steps
 
         ########################### Regularization ##########################
-        orthogonal_loss = 0.
-        for name, param in self.model.named_parameters():
-            if "lora_A" in name:
-                for name_, param_ in self.model.named_parameters():
-                    if "loranew_A" in name_ and name.split("lora_A")[0] == name_.split("loranew_A")[0]:
-                        orthogonal_loss += torch.abs(torch.mm(param, param_.T)).sum() # [r * dim] * [dim * r]
-                        break # target modules have been matched
-
-        # l2-normalization for loranew_A/B
-        l2_loss = 0.
-        for name, param in self.model.named_parameters():
-            if "loranew_" in name:
-                l2_loss += torch.norm(param, p=2)
-
-        lamda_1 = self.args.lamda_1
-        lamda_2 = self.args.lamda_2
-
-        logger.info(f"orthogonal_loss: {orthogonal_loss.item()}; l2_loss: {l2_loss.item()}; accuracy_loss: {loss.item()}; λ1: {lamda_1}; λ2: {lamda_2}")
-        loss = loss + orthogonal_loss * lamda_1 + l2_loss * lamda_2
+        # orthogonal_loss = 0.
+        # for name, param in self.model.named_parameters():
+        #     if "lora_A" in name:
+        #         for name_, param_ in self.model.named_parameters():
+        #             if "loranew_A" in name_ and name.split("lora_A")[0] == name_.split("loranew_A")[0]:
+        #                 orthogonal_loss += torch.abs(torch.mm(param, param_.T)).sum() # [r * dim] * [dim * r]
+        #                 break # target modules have been matched
+        #
+        # # l2-normalization for loranew_A/B
+        # l2_loss = 0.
+        # for name, param in self.model.named_parameters():
+        #     if "loranew_" in name:
+        #         l2_loss += torch.norm(param, p=2)
+        #
+        # lamda_1 = self.args.lamda_1
+        # lamda_2 = self.args.lamda_2
+        #
+        # #logger.info(f"orthogonal_loss: {orthogonal_loss.item()}; l2_loss: {l2_loss.item()}; accuracy_loss: {loss.item()}; λ1: {lamda_1}; λ2: {lamda_2}")
+        # logger.info(
+        #     f"orthogonal_loss: {orthogonal_loss}; l2_loss: {l2_loss}; accuracy_loss: {loss.item()}; λ1: {lamda_1}; λ2: {lamda_2}")
+        # loss = loss + orthogonal_loss * lamda_1 + l2_loss * lamda_2
         ######################################################################
 
         if self.do_grad_scaling:
