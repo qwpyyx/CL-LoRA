@@ -20,6 +20,8 @@ Fine-tuning the library models for sequence to sequence.
 
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 import warnings
+import deepspeed
+deepspeed.ops.op_builder.CPUAdamBuilder().load()
 import logging
 import os
 import sys
@@ -50,7 +52,7 @@ from uie_dataset_lora import gen_cache_path
 from uie_trainer_lora import UIETrainer, DenserEvalCallback, skip_instructions
 from compute_metrics import compute_metrics, compute_grouped_metrics
 from model.llama import LlamaForCausalLM_with_lossmask
-from src.peft.tuners.mmoeloraS import MMOELoraConfigS, MMOELoraModelS
+from peft.tuners.mmoeloraS import MMOELoraConfigS, MMOELoraModelS
 
 # ignore all warning
 #warnings.filterwarnings("ignore")
