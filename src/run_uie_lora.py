@@ -36,7 +36,6 @@ from transformers import (
     AutoConfig,
     AutoModel,
     AutoModelForSeq2SeqLM,
-    AutoModelForCausalLM,  # add
     AutoTokenizer,
     HfArgumentParser,
     Seq2SeqTrainingArguments,
@@ -51,7 +50,7 @@ from uie_dataset_lora import gen_cache_path
 from uie_trainer_lora import UIETrainer, DenserEvalCallback, skip_instructions
 from compute_metrics import compute_metrics, compute_grouped_metrics
 from model.llama import LlamaForCausalLM_with_lossmask
-
+from src.peft.tuners.mmoeloraS import MMOELoraConfigS, MMOELoraModelS
 
 # ignore all warning
 #warnings.filterwarnings("ignore")
@@ -78,6 +77,9 @@ class ModelArguments:
     """
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    lora_name: Optional[str] = field(
+        default="lora", metadata={"help": "LoRA Type"}
     )
     model_method: Optional[str] = field(
         default=None, metadata={"help": "T5/roberta/llama"}
@@ -127,6 +129,10 @@ class ModelArguments:
         default=False,
         metadata={"help": "Whether to use a single LoRA configuration for all tasks (baseline LoRA)."}
     )
+
+    task_num: Optional[int] = field(default=16)
+    task_embedding_dim: Optional[int] = field(default=64)
+    expert_num: Optional[int] = field(default=4)
 
 @dataclass
 class DataTrainingArguments:
@@ -271,7 +277,7 @@ def main():
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
-        #
+
     # Log on each process the small summary:
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu},"
@@ -369,6 +375,17 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
+    kwargs = {}
+    if model_args.lora_name == 'moelora':
+        TargetLoraConfig = MMOELoraConfigS
+        kwargs = {
+            "task_num": model_args.task_num,
+            "task_embedding_dim": model_args.task_embedding_dim,
+            "expert_num": model_args.expert_num,
+        }
+    else:
+        TargetLoraConfig = LoraConfig
+
     # 模型类别设置
     if 'llama' in model_args.model_name_or_path.lower():  # add llama
         model_class = LlamaForCausalLM_with_lossmask
@@ -393,7 +410,7 @@ def main():
         )
 
     # 这里修改其他PEFT方法
-        peft_config = LoraConfig(
+        peft_config = TargetLoraConfig(
             task_type=TaskType.CAUSAL_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
         )
         model = get_peft_model(model, peft_config)
@@ -416,11 +433,13 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        peft_config = LoraConfig(
+        peft_config = TargetLoraConfig(
             task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=model_args.lora_dim, lora_alpha=32, lora_dropout=0.1
         )
         #应该是修改这部分
         model = get_peft_model(model, peft_config)
+
+    model.print_trainable_parameters()
 
     # 确保模型的词嵌入矩阵与 tokenizer 的词汇表大小一致
     model.resize_token_embeddings(len(tokenizer))
@@ -435,10 +454,10 @@ def main():
     # optional: lora_A/B is trainable but should not move too far from lorapre_A/B
     # (constrained in "training_step"[uie_trainer_lora.py])
     for name, param in model.named_parameters():
-        if name.find("loranew_") != -1:
+        # if name.find("loranew_") != -1:
+        #     param.requires_grad = True
+        if name.find("lora_") != -1:
             param.requires_grad = True
-        elif name.find("lora_") != -1:
-            param.requires_grad = False
         # this module should always be frozen because we change the vocabulary
         elif name.find("shared") != -1:
             param.requires_grad = False

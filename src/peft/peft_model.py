@@ -27,7 +27,7 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import PreTrainedModel
 from transformers.modeling_outputs import SequenceClassifierOutput, TokenClassifierOutput
 from transformers.utils import PushToHubMixin
-
+from .tuners.mmoeloraS import MMOELoraModelS
 from .tuners import (
     AdaLoraModel,
     AdaptionPromptModel,
@@ -58,6 +58,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.PREFIX_TUNING: PrefixEncoder,
     PeftType.ADALORA: AdaLoraModel,
     PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
+    PeftType.MMOELORAS: MMOELoraModelS,
 }
 
 
@@ -96,7 +97,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not isinstance(peft_config, PromptLearningConfig):
             self.peft_config[adapter_name] = peft_config
-            # 下面进入lora.py的LoraModel类，相当于LoraModel(self.base_model, self.peft_config, adapter_name)
+            # 下面进入mmoeloraS.py的MMOELoraModelS类，相当于MMOELoraModelS(self.base_model, self.peft_config, adapter_name)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )

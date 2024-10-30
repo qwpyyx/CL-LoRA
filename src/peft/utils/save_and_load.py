@@ -132,7 +132,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     else:
         state_dict = peft_model_state_dict
 
-    if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
+    if config.peft_type in (PeftType.LORA, PeftType.ADALORA, PeftType.MMOELORAS):
         peft_model_state_dict = {}
         for k, v in state_dict.items():
             if "lora_" in k:
@@ -146,15 +146,15 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 # 这一行进行了加载，把上一个任务的adapter加载进到lora_A,lora_B中。
                 peft_model_state_dict[k] = v
             
-            # modified
-            elif "loranew_" in k: 
-                suffix = k.split("loranew_")[1]
-                if "." in suffix:
-                    suffix_to_replace = ".".join(suffix.split(".")[1:])
-                    k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
-                else:
-                    k = f"{k}.{adapter_name}"
-                peft_model_state_dict[k] = v
+            # # modified
+            # elif "loranew_" in k:
+            #     suffix = k.split("loranew_")[1]
+            #     if "." in suffix:
+            #         suffix_to_replace = ".".join(suffix.split(".")[1:])
+            #         k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
+            #     else:
+            #         k = f"{k}.{adapter_name}"
+            #     peft_model_state_dict[k] = v
                 
             else:
                 peft_model_state_dict[k] = v
