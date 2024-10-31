@@ -34,25 +34,25 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         
         # modified
         # 如果 save_loranew 为 False，说明需要将 lora 和 loranew 的参数进行融合
-        if config.save_loranew == False:
-            flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
-            for k in state_dict:
-                if "lora_A" in k:
-                    for k_ in state_dict:
-                        if "loranew_A" in k_ and k.split("lora_A")[0] == k_.split("loranew_A")[0]:
-                            state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=0) # [r_sum + r, r]
-                            if flag == 1:
-                                config.r_sum = state_dict[k].shape[0] 
-                                flag = 0
-                            break # target modules have been matched
-                elif "lora_B" in k:
-                    for k_ in state_dict:
-                        if "loranew_B" in k_ and k.split("lora_B")[0] == k_.split("loranew_B")[0]:
-                            state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=1) # [r, r_sum + r]
-                            break # target modules have been matched
+        # if config.save_loranew == False:
+        #     flag = 1 # this is a switch represents whether 'r_sum' is written to the config file
+        #     for k in state_dict:
+        #         if "lora_A" in k:
+        #             for k_ in state_dict:
+        #                 if "loranew_A" in k_ and k.split("lora_A")[0] == k_.split("loranew_A")[0]:
+        #                     state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=0) # [r_sum + r, r]
+        #                     if flag == 1:
+        #                         config.r_sum = state_dict[k].shape[0]
+        #                         flag = 0
+        #                     break # target modules have been matched
+        #         elif "lora_B" in k:
+        #             for k_ in state_dict:
+        #                 if "loranew_B" in k_ and k.split("lora_B")[0] == k_.split("loranew_B")[0]:
+        #                     state_dict[k] = torch.cat((state_dict[k], state_dict[k_]), dim=1) # [r, r_sum + r]
+        #                     break # target modules have been matched
 
                 
-    if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
+    if config.peft_type in (PeftType.LORA, PeftType.ADALORA, PeftType.MMOELORAS):
         # to_return = lora_state_dict(model, bias=model.peft_config.bias)
         # adapted from `https://github.com/microsoft/LoRA/blob/main/loralib/utils.py`
         # to be used directly with the state dict which is necessary when using DeepSpeed or FSDP
@@ -60,12 +60,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
         # modified
         if bias == "none":
-            if config.save_loranew: 
-                to_return = {k: state_dict[k] for k in state_dict if "lora_" in k or "loranew_" in k} # modified
-            else:
-                # 这种情况loranew的都已经被融合进lora_里面了，所以不需要loranew
-                to_return = {k: state_dict[k] for k in state_dict if "lora_" in k}
-
+            to_return = {k: state_dict[k] for k in state_dict if "lora_" in k}
         elif bias == "all":
             to_return = {k: state_dict[k] for k in state_dict if "lora_" in k or "bias" in k}
         elif bias == "lora_only":
@@ -81,8 +76,9 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
         # modified
         # 对 to_return 字典进行进一步的过滤,只保留这三种情况的键
-        to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k) or ("loranew_" in k))}
-        
+        # to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k) or ("loranew_" in k))}
+        to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
+
         if config.peft_type == PeftType.ADALORA:
             rank_pattern = config.rank_pattern
             if rank_pattern is not None:
